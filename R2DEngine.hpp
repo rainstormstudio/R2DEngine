@@ -127,7 +127,7 @@ void glfwErrorCallback(int error, const char* description);
 void glfwFramebufferSizeCallback(GLFWwindow* window, int screenWidth, int screenHeight);
 
 // default shaders
-const char *vShader = "                     \n\
+static const char *vShader = "                     \n\
 #version 410                                \n\
                                             \n\
 layout (location = 0) in vec2 position;     \n\
@@ -140,7 +140,7 @@ void main() {                               \n\
     texCoord = tex;                         \n\
 }";
 
-const char *fShader = "                             \n\
+static const char *fShader = "                             \n\
 #version 410                                        \n\
                                                     \n\
 in vec2 texCoord;                                   \n\
@@ -170,6 +170,7 @@ protected:
     struct Coord {
         uint32_t x = 0;
         uint32_t y = 0;
+        Coord(uint32_t x = 0, uint32_t y = 0) : x(x), y(y) {}
     };
 
     struct Color {
@@ -177,6 +178,7 @@ protected:
         uint8_t g = 0;
         uint8_t b = 0;
         uint8_t a = 255;
+        Color(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255) : r(r), g(g), b(b), a(a) {}
     };
     
     // graphics

@@ -3,7 +3,7 @@
 
 class Demo : public R2DEngine {
     double t;
-    uint8_t calcR(int n) {
+    inline uint8_t calcR(int n) {
         n += t;
         n /= innerWidth / 1.2;
         int x = round(t) + n;
@@ -11,14 +11,14 @@ class Demo : public R2DEngine {
         x = x % 500;
         return (abs(255 - x));
     }
-    uint8_t calcG(int n) {
+    inline uint8_t calcG(int n) {
         n += t;
         n /= innerWidth / 1.2;
         int x = round(t) + n;
         x = x % 500;
         return (abs(255 - x));
     }
-    uint8_t calcB(int n) {
+    inline uint8_t calcB(int n) {
         n += t;
         n /= innerWidth / 1.2;
         int x = round(t) + n;
@@ -40,6 +40,7 @@ public:
         }
         for (int x = 0; x < innerWidth; x ++) {
             for (int y = 0; y < innerHeight; y ++) {
+                
                 drawPoint({x, y}, {
                     ((calcR(x * (innerHeight - y)))),
                     ((calcG(y * (innerWidth - x)))),
@@ -53,7 +54,7 @@ public:
 
 int main() {
     Demo demo;
-    if (demo.construct()) {
+    if (demo.construct(1280, 720)) {
         demo.init();
     }
 
