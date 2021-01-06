@@ -130,24 +130,25 @@ void glfwFramebufferSizeCallback(GLFWwindow* window, int screenWidth, int screen
 const char *vShader = "                     \n\
 #version 410                                \n\
                                             \n\
-layout (location = 0) in vec3 position;     \n\
-layout (location = 1) in vec4 color;        \n\
+layout (location = 0) in vec2 position;     \n\
+layout (location = 1) in vec2 tex;          \n\
                                             \n\
-out vec4 out_color;                         \n\                                            
+out vec2 texCoord;                          \n\                                            
                                             \n\
 void main() {                               \n\
-    gl_Position = vec4(position, 1.0);      \n\
-    out_color = color;                      \n\
+    gl_Position = vec4(position, 0.0, 1.0); \n\
+    texCoord = tex;                         \n\
 }";
 
-const char *fShader = "                     \n\
-#version 410                                \n\
-                                            \n\
-in vec4 out_color;                          \n\
-out vec4 gl_FragColor;                      \n\
-                                            \n\
-void main() {                               \n\
-    gl_FragColor = out_color;               \n\
+const char *fShader = "                             \n\
+#version 410                                        \n\
+                                                    \n\
+in vec2 texCoord;                                   \n\
+out vec4 gl_FragColor;                              \n\
+uniform sampler2D theTexture;                       \n\
+                                                    \n\
+void main() {                                       \n\
+    gl_FragColor = texture(theTexture, texCoord);   \n\
 }";
 
 class R2DEngine {
@@ -158,6 +159,9 @@ private:
     // graphics
     GLFWwindow* window;
     GLuint shader;
+    GLuint bufferTexture;
+    GLubyte* bufferData;
+    GLuint vao, ibo, vbo;
 
 protected:
     // game
@@ -226,6 +230,12 @@ void glfwFramebufferSizeCallback(GLFWwindow* window, int screenWidth, int screen
 
 R2DEngine::R2DEngine() {
     window = nullptr;
+    shader = 0;
+    vao = 0;
+    vbo = 0;
+    ibo = 0;
+    bufferData = nullptr;
+    bufferTexture = 0;
     loop = false;
 
     screenWidth = 0;
@@ -287,6 +297,48 @@ bool R2DEngine::construct(int32_t screenWidth, int32_t screenHeight, int32_t inn
     compileShaders();
     DEBUG_MSG("shaders compiled");
 
+    bufferData = new GLubyte[screenWidth * screenHeight * 4];
+    memset(bufferData, 0, sizeof(bufferData));
+    glGenTextures(1, &bufferTexture);
+    glBindTexture(GL_TEXTURE_2D, bufferTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screenWidth, screenHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bufferData);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    GLfloat vertices[] = {
+        -1.0f, 1.0f,    0.0f, 0.0f,
+        1.0f, 1.0f,     1.0f, 0.0f,
+        1.0f, -1.0f,    1.0f, 1.0f,
+        -1.0f, -1.0f,   0.0f, 1.0f
+    };
+    GLuint indices[] = {
+        0, 1, 2,
+        2, 3, 0
+    };
+
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    glGenBuffers(1, &ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]) * 4, 0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]) * 4, (GLvoid*)(sizeof(vertices[0]) * 2));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    DEBUG_MSG("buffer generated");
+
     return true;
 }
 
@@ -298,10 +350,20 @@ void R2DEngine::init() {
 
 void R2DEngine::clearBuffer() {
     glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(shader);
 }
 
 void R2DEngine::swapBuffers() {
+    glUseProgram(shader);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, bufferTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, screenWidth, screenHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bufferData);
+
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
     glUseProgram(0);
     glfwSwapBuffers(window);
 }
@@ -417,40 +479,10 @@ void R2DEngine::gameLoop() {
 }
 
 void R2DEngine::drawPoint(Coord coord, Color color) {
-    float posX = 2.0f * static_cast<float>(coord.x) / static_cast<float>(screenWidth) - 1.0f;
-    float posY = -2.0f * static_cast<float>(coord.y) / static_cast<float>(screenHeight) + 1.0f;
-
-    float red = static_cast<float>(color.r) / 255.0f;
-    float green = static_cast<float>(color.g) / 255.0f;
-    float blue = static_cast<float>(color.b) / 255.0f;
-    float alpha = static_cast<float>(color.a) / 255.0f;
-
-    GLfloat vertexPos[3] = {posX, posY, 0.0f};
-    GLfloat vertexColor[4] = {red, green, blue, alpha};
-
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    GLuint vertexBuffer;
-    glGenBuffers(1, &vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPos), vertexPos, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
-    GLuint colorBuffer;
-    glGenBuffers(1, &colorBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexColor), vertexColor, GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(1);
-
-    glDrawArrays(GL_POINTS, 0, 1);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 0] = color.r;
+    bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 1] = color.g;
+    bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 2] = color.b;
+    bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 3] = color.a;
 }
 
 #endif
