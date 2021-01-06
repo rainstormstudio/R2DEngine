@@ -37,13 +37,12 @@ public:
         }
         for (int x = 0; x < screenWidth; x ++) {
             for (int y = 0; y < screenHeight; y ++) {
+                
                 drawPoint({x, y}, {
                     static_cast<uint8_t>(round(calcR(x * (screenHeight - y)))),
                     static_cast<uint8_t>(round(calcG(y * (screenWidth - x)))),
                     static_cast<uint8_t>(round(calcB(x * y)))
                 });
-                std::stringstream ss;
-                ss << "[" << x << "," << y << "]";
                 //DEBUG_MSG(ss.str().c_str());
             }
         }

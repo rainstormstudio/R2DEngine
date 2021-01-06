@@ -471,6 +471,21 @@ void R2DEngine::gameLoop() {
     }
 
     DEBUG_MSG("game loop end");
+
+    if (ibo != 0) {
+        glDeleteBuffers(1, &ibo);
+        ibo = 0;
+    }
+    if (vbo != 0) {
+        glDeleteBuffers(1, &vbo);
+        vbo = 0;
+    }
+    if (vao != 0) {
+        glDeleteBuffers(1, &vao);
+        vao = 0;
+    }
+    glDeleteTextures(1, &bufferTexture);
+    delete bufferData;
             
     glfwDestroyWindow(window);
     glfwTerminate();
