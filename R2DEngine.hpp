@@ -311,15 +311,15 @@ bool R2DEngine::construct(int32_t screenWidth, int32_t screenHeight, int32_t inn
     compileShaders();
     DEBUG_MSG("shaders compiled");
 
-    bufferData = new GLubyte[screenWidth * screenHeight * 4];
-    memset(bufferData, 0, sizeof(bufferData));
+    bufferData = new GLubyte[innerWidth * innerHeight * 4];
+    memset(bufferData, 0, sizeof(GLubyte) * innerWidth * innerHeight * 4);
     glGenTextures(1, &bufferTexture);
     glBindTexture(GL_TEXTURE_2D, bufferTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screenWidth, screenHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bufferData);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, innerWidth, innerHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bufferData);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     GLfloat vertices[] = {
@@ -363,15 +363,16 @@ void R2DEngine::init() {
 }
 
 void R2DEngine::clearBuffer() {
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    memset(bufferData, 0, sizeof(GLubyte) * innerWidth * innerHeight * 4);
 }
 
 void R2DEngine::swapBuffers() {
     glUseProgram(shader);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, bufferTexture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, screenWidth, screenHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bufferData);
-
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, innerWidth, innerHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bufferData);
+    
     glBindVertexArray(vao);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -472,6 +473,12 @@ void R2DEngine::gameLoop() {
                 break;
             }
             glfwGetCursorPos(window, &mousePosX, &mousePosY);
+            mousePosX = round(mousePosX / screenWidth * innerWidth);
+            mousePosY = round(mousePosY / screenHeight * innerHeight);
+            GLint m_viewport[4];
+            glGetIntegerv(GL_VIEWPORT, m_viewport);
+            screenWidth = m_viewport[2];
+            screenHeight = m_viewport[3];
             
             clearBuffer();
             if (!onUpdate(deltaTime)) {
@@ -509,11 +516,11 @@ void R2DEngine::gameLoop() {
 }
 
 void R2DEngine::drawPoint(Coord coord, Color color) {
-    if (0 <= coord.x && coord.x < screenWidth && 0 <= coord.y && coord.y < screenHeight) {
-        bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 0] = color.r;
-        bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 1] = color.g;
-        bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 2] = color.b;
-        bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 3] = color.a;
+    if (0 <= coord.x && coord.x < innerWidth && 0 <= coord.y && coord.y < innerHeight) {
+        bufferData[coord.y * innerWidth * 4 + coord.x * 4 + 0] = color.r;
+        bufferData[coord.y * innerWidth * 4 + coord.x * 4 + 1] = color.g;
+        bufferData[coord.y * innerWidth * 4 + coord.x * 4 + 2] = color.b;
+        bufferData[coord.y * innerWidth * 4 + coord.x * 4 + 3] = color.a;
     }
 }
 
