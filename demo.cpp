@@ -47,6 +47,12 @@ public:
                 });
             }
         }
+        for (int x = 0; x < 10; x ++) {
+            drawPoint({mousePosX + x - 5, mousePosY}, {255, 255, 255, 100});
+        }
+        for (int y = 0; y < 10; y ++) {
+            drawPoint({mousePosX, mousePosY + y - 5}, {255, 255, 255, 100});
+        }
         return true;
     }
 };

@@ -163,6 +163,8 @@ private:
     GLubyte* bufferData;
     GLuint vao, ibo, vbo;
 
+    // events
+
 protected:
     // game
     struct Coord {
@@ -185,8 +187,14 @@ protected:
     std::string windowTitle;
 
     // events
-    int32_t mousePosX;
-    int32_t mousePosY;
+    enum InputState {
+        UNKNOWN,
+        PRESS,
+        RELEASE,
+        REPEAT
+    };
+    double mousePosX;
+    double mousePosY;
     
 private:
     void gameLoop();
@@ -212,6 +220,12 @@ public:
     // game
     bool construct(int32_t screenWidth = 800, int32_t screenHeight = 600, int32_t innerWidth = 800, int32_t innerHeight = 600);
     void init();
+
+public:
+    // events
+    InputState getKeyState(int key) const;
+    InputState getMouseState(int mouseButton) const;
+
 
 public:
     // graphics
@@ -452,11 +466,13 @@ void R2DEngine::gameLoop() {
                 lastSec = time_b;
             }
 
+            glfwPollEvents();
             if (glfwWindowShouldClose(window)) {
                 loop = false;
+                break;
             }
-            glfwPollEvents();
-
+            glfwGetCursorPos(window, &mousePosX, &mousePosY);
+            
             clearBuffer();
             if (!onUpdate(deltaTime)) {
                 loop = false;
@@ -493,10 +509,36 @@ void R2DEngine::gameLoop() {
 }
 
 void R2DEngine::drawPoint(Coord coord, Color color) {
-    bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 0] = color.r;
-    bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 1] = color.g;
-    bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 2] = color.b;
-    bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 3] = color.a;
+    if (0 <= coord.x && coord.x < screenWidth && 0 <= coord.y && coord.y < screenHeight) {
+        bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 0] = color.r;
+        bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 1] = color.g;
+        bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 2] = color.b;
+        bufferData[coord.y * screenWidth * 4 + coord.x * 4 + 3] = color.a;
+    }
+}
+
+R2DEngine::InputState R2DEngine::getKeyState(int key) const {
+    int state = glfwGetKey(window, key);
+    if (state == GLFW_PRESS) {
+        return PRESS;
+    } else if (state == GLFW_RELEASE) {
+        return RELEASE;
+    } else if (state == GLFW_REPEAT) {
+        return REPEAT;
+    }
+    return UNKNOWN;
+}
+
+R2DEngine::InputState R2DEngine::getMouseState(int mouseButton) const {
+    int state = glfwGetMouseButton(window, mouseButton);
+    if (state == GLFW_PRESS) {
+        return PRESS;
+    } else if (state == GLFW_RELEASE) {
+        return RELEASE;
+    } else if (state == GLFW_REPEAT) {
+        return REPEAT;
+    }
+    return UNKNOWN;
 }
 
 #endif
