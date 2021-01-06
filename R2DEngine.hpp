@@ -446,9 +446,8 @@ void R2DEngine::gameLoop() {
             nFrames ++;
             if (secPast >= 1.0f) {
                 double fps = static_cast<double>(nFrames) / deltaTime;
-                std::stringstream ss;
-                ss << windowTitle << " - FPS:" << std::setprecision(3) << fps;
-                glfwSetWindowTitle(window, ss.str().c_str());
+                std::string title = windowTitle + " - FPS: " + std::to_string(fps);
+                glfwSetWindowTitle(window, title.c_str());
                 nFrames = 0;
                 lastSec = time_b;
             }
