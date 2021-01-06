@@ -297,7 +297,7 @@ bool R2DEngine::construct(int32_t screenWidth, int32_t screenHeight, int32_t inn
     glfwSetFramebufferSizeCallback(window, glfwFramebufferSizeCallback);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0.0, this->screenWidth, this->screenHeight, 0.0, 1.0, -1.0);
+    glOrtho(0.0, this->innerWidth, this->innerHeight, 0.0, 1.0, -1.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
@@ -447,25 +447,20 @@ void R2DEngine::gameLoop() {
     }
 
     double time_a = glfwGetTime();
-    double lastSec = glfwGetTime();
     double time_b = glfwGetTime();
-    uint32_t nFrames = 0;
 
     DEBUG_MSG("game loop start");
     while (loop) {
         while (loop) {
             time_b = glfwGetTime();
             double deltaTime = time_b - time_a;
-            double secPast = time_b - lastSec;
-            time_a = time_b;
-            nFrames ++;
-            if (secPast >= 1.0f) {
-                double fps = static_cast<double>(nFrames) / deltaTime;
-                std::string title = windowTitle + " - FPS: " + std::to_string(fps);
-                glfwSetWindowTitle(window, title.c_str());
-                nFrames = 0;
-                lastSec = time_b;
+            while (deltaTime < 0.001) {
+                time_b = glfwGetTime();
+                deltaTime = time_b - time_a;
             }
+            time_a = time_b;
+            std::string title = windowTitle + " - FPS: " + std::to_string(1.0 / deltaTime);
+            glfwSetWindowTitle(window, title.c_str());
 
             glfwPollEvents();
             if (glfwWindowShouldClose(window)) {

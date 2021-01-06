@@ -40,19 +40,12 @@ public:
         }
         for (int x = 0; x < innerWidth; x ++) {
             for (int y = 0; y < innerHeight; y ++) {
-                
                 drawPoint({x, y}, {
                     ((calcR(x * (innerHeight - y)))),
                     ((calcG(y * (innerWidth - x)))),
                     ((calcB(x * y)))
                 });
             }
-        }
-        for (int x = 0; x < 20; x ++) {
-            drawPoint({mousePosX + x - 10, mousePosY}, {255, 255, 255, 100});
-        }
-        for (int y = 0; y < 20; y ++) {
-            drawPoint({mousePosX, mousePosY + y - 10}, {255, 255, 255, 100});
         }
         return true;
     }
