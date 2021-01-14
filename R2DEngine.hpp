@@ -127,20 +127,20 @@ void glfwErrorCallback(int error, const char* description);
 void glfwFramebufferSizeCallback(GLFWwindow* window, int screenWidth, int screenHeight);
 
 // default shaders
-static const char *vShader = "                     \n\
+static const char *vShader = "              \n\
 #version 410                                \n\
                                             \n\
 layout (location = 0) in vec2 position;     \n\
 layout (location = 1) in vec2 tex;          \n\
                                             \n\
-out vec2 texCoord;                          \n\                                            
+out vec2 texCoord;                          \n\
                                             \n\
 void main() {                               \n\
     gl_Position = vec4(position, 0.0, 1.0); \n\
     texCoord = tex;                         \n\
 }";
 
-static const char *fShader = "                             \n\
+static const char *fShader = "                      \n\
 #version 410                                        \n\
                                                     \n\
 in vec2 texCoord;                                   \n\

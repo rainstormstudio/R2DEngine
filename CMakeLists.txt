@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.9)
 
 project(R2DEngine)
 
-
 if(UNIX)
     find_package(OpenGL REQUIRED)
     find_package(glfw3 REQUIRED)

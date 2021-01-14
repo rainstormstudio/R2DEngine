@@ -1,4 +1,3 @@
-#define DEBUG_ENABLED 1
 #include "R2DEngine.hpp"
 
 class Demo : public R2DEngine {
@@ -40,12 +39,13 @@ public:
         }
         for (int x = 0; x < innerWidth; x ++) {
             for (int y = 0; y < innerHeight; y ++) {
-                
+                /*
                 drawPoint({x, y}, {
                     ((calcR(x * (innerHeight - y)))),
                     ((calcG(y * (innerWidth - x)))),
                     ((calcB(x * y)))
-                });
+                });*/
+                drawPoint({x, y}, {x, y, 100});
             }
         }
         return true;
@@ -54,7 +54,7 @@ public:
 
 int main() {
     Demo demo;
-    if (demo.construct(1280, 720)) {
+    if (demo.construct(1280, 720, 1280, 720)) {
         demo.init();
     }
 
