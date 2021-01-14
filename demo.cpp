@@ -53,7 +53,7 @@ public:
 
 int main() {
     Demo demo;
-    if (demo.construct(1280, 720, 1280, 720)) {
+    if (demo.construct(1280, 720)) {
         demo.init();
     }
 

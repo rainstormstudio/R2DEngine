@@ -405,7 +405,7 @@ bool R2DEngine::construct(int32_t screenWidth, int32_t screenHeight, int32_t inn
         DEBUG_ERROR(SDL_GetError());
         return false;
     } else {
-        window = SDL_CreateWindow(windowTitle.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screenWidth, screenHeight, SDL_WINDOW_SHOWN);
+        window = SDL_CreateWindow(windowTitle.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screenWidth, screenHeight, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
         SDL_SetWindowFullscreen(window, 0);
         SDL_RaiseWindow(window);
         if (!window) {
@@ -593,12 +593,15 @@ void R2DEngine::gameLoop() {
                         break;
                     }
                     case SDL_MOUSEMOTION: {
-                        mousePosX = round((double)event.motion.x / (screenWidth / innerWidth));
-                        mousePosY = round((double)event.motion.y / (screenHeight / innerHeight));
+                        mousePosX = event.motion.x;
+                        mousePosY = event.motion.y;
+                        mousePosX = round(mousePosX / screenWidth * innerWidth);
+                        mousePosY = round(mousePosY / screenHeight * innerHeight);
                         break;
                     }
                 }
             }
+            SDL_GetWindowSize(window, &screenWidth, &screenHeight);
 #endif
             
             clearBuffer();
