@@ -1,3 +1,4 @@
+//#define USE_SDL2 1
 #include "R2DEngine.hpp"
 
 class Demo : public R2DEngine {
@@ -39,13 +40,11 @@ public:
         }
         for (int x = 0; x < innerWidth; x ++) {
             for (int y = 0; y < innerHeight; y ++) {
-                /*
                 drawPoint({x, y}, {
                     ((calcR(x * (innerHeight - y)))),
                     ((calcG(y * (innerWidth - x)))),
                     ((calcB(x * y)))
-                });*/
-                drawPoint({x, y}, {x, y, 100});
+                });
             }
         }
         return true;

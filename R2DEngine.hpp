@@ -2,7 +2,7 @@
  * @file R2DEngine.hpp
  * @author Daniel Hongyu Ding
  * @brief Rainstorm 2D Engine
- * @version 0.1
+ * @version 0.2
  * @date 2021-01-05
  * 
  * @copyright Copyright (c) 2021
@@ -29,11 +29,32 @@
 #include <map>
 #include <algorithm>
 
+#if USE_OPENGL
 // opengl related
 #define GLFW_INCLUDE_NONE
 #include <glm/glm.hpp>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#elif USE_SDL2
+    #ifdef __linux__
+    #include "SDL2/SDL.h"
+    #include "SDL2/SDL_image.h"
+    #include "SDL2/SDL_mixer.h"
+    #include "SDL2/SDL_ttf.h"
+    #elif _WIN32
+    #include "SDL.h"
+    #include "SDL_image.h"
+    #include "SDL_mixer.h"
+    #include "SDL_ttf.h"
+    #endif
+#else
+// default using opengl
+#define USE_OPENGL 1
+#define GLFW_INCLUDE_NONE
+#include <glm/glm.hpp>
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#endif
 
 /*
 STATIC_ASSERT(expr) assert expr at compile-time
@@ -122,6 +143,7 @@ namespace Debug {
     }
 };
 
+#if USE_OPENGL
 // glfw callbacks
 void glfwErrorCallback(int error, const char* description);
 void glfwFramebufferSizeCallback(GLFWwindow* window, int screenWidth, int screenHeight);
@@ -150,6 +172,7 @@ uniform sampler2D theTexture;                       \n\
 void main() {                                       \n\
     gl_FragColor = texture(theTexture, texCoord);   \n\
 }";
+#endif
 
 class R2DEngine {
 private:
@@ -157,13 +180,23 @@ private:
     bool loop;
 
     // graphics
+#if USE_OPENGL
     GLFWwindow* window;
     GLuint shader;
     GLuint bufferTexture;
     GLubyte* bufferData;
     GLuint vao, ibo, vbo;
+#elif USE_SDL2
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+    SDL_Texture* bufferTexture;
+    uint8_t* bufferData;
+#endif
 
     // events
+#if USE_SDL2
+    SDL_Event event;
+#endif
 
 protected:
     // game
@@ -203,8 +236,11 @@ private:
 
     void clearBuffer();
     void swapBuffers();
+
+#if USE_OPENGL
     void addShader(GLuint program, const char* shaderCode, GLenum shaderType);
     void compileShaders();
+#endif
 
 public:
     R2DEngine();
@@ -235,6 +271,7 @@ public:
     void drawLine(Coord coord1, Coord coord2, Color color);
 };
 
+#if USE_OPENGL
 void glfwErrorCallback(int error, const char* description) {
     DEBUG_MSG(description);
 }
@@ -242,9 +279,11 @@ void glfwErrorCallback(int error, const char* description) {
 void glfwFramebufferSizeCallback(GLFWwindow* window, int screenWidth, int screenHeight) {
     glViewport(0, 0, screenWidth, screenHeight);
 }
+#endif
 
 
 R2DEngine::R2DEngine() {
+#if USE_OPENGL
     window = nullptr;
     shader = 0;
     vao = 0;
@@ -252,6 +291,11 @@ R2DEngine::R2DEngine() {
     ibo = 0;
     bufferData = nullptr;
     bufferTexture = 0;
+#elif USE_SDL2
+    window = nullptr;
+    renderer = nullptr;
+    bufferData = nullptr;
+#endif
     loop = false;
 
     screenWidth = 0;
@@ -269,6 +313,7 @@ bool R2DEngine::construct(int32_t screenWidth, int32_t screenHeight, int32_t inn
     this->innerWidth = innerWidth;
     this->innerHeight = innerHeight;
 
+#if USE_OPENGL
     if (!glfwInit()) {
         DEBUG_ERROR("Failed to initialize GLFW");
         return false;
@@ -354,6 +399,44 @@ bool R2DEngine::construct(int32_t screenWidth, int32_t screenHeight, int32_t inn
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     DEBUG_MSG("buffer generated");
+#elif USE_SDL2
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO) < 0) {
+        DEBUG_ERROR("SDL initialization failed: ");
+        DEBUG_ERROR(SDL_GetError());
+        return false;
+    } else {
+        window = SDL_CreateWindow(windowTitle.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screenWidth, screenHeight, SDL_WINDOW_SHOWN);
+        SDL_SetWindowFullscreen(window, 0);
+        SDL_RaiseWindow(window);
+        if (!window) {
+            DEBUG_ERROR("Failed to create window: ");
+            DEBUG_ERROR(SDL_GetError());
+            return false;
+        } else {
+            renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
+                DEBUG_ERROR("Failed to load SDL_image: ");
+                DEBUG_ERROR(IMG_GetError());
+                return false;
+            }
+            if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+                DEBUG_ERROR("Failed to load SDL_mixer: ");
+                DEBUG_ERROR(Mix_GetError());
+                return false;
+            }
+        }
+    }
+    bufferTexture = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_ABGR8888,
+        SDL_TEXTUREACCESS_STREAMING,
+        innerWidth,
+        innerHeight
+    );
+    bufferData = new uint8_t[innerWidth * innerHeight * 4];
+    memset(bufferData, 0, sizeof(uint8_t) * innerWidth * innerHeight * 4);
+#endif
 
     return true;
 }
@@ -365,11 +448,18 @@ void R2DEngine::init() {
 }
 
 void R2DEngine::clearBuffer() {
+#if USE_OPENGL
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     memset(bufferData, 0, sizeof(GLubyte) * innerWidth * innerHeight * 4);
+#elif USE_SDL2
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    memset(bufferData, 0, sizeof(uint8_t) * innerWidth * innerHeight * 4);
+#endif
 }
 
 void R2DEngine::swapBuffers() {
+#if USE_OPENGL
     glUseProgram(shader);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, bufferTexture);
@@ -383,8 +473,14 @@ void R2DEngine::swapBuffers() {
 
     glUseProgram(0);
     glfwSwapBuffers(window);
+#elif USE_SDL2
+    SDL_UpdateTexture(bufferTexture, nullptr, (void*)bufferData, innerWidth * 4);
+    SDL_RenderCopy(renderer,  bufferTexture, nullptr, nullptr);
+    SDL_RenderPresent(renderer);
+#endif
 }
 
+#if USE_OPENGL
 void R2DEngine::addShader(GLuint program, const char* shaderCode, GLenum shaderType) {
     GLuint shader = glCreateShader(shaderType);
 
@@ -442,20 +538,28 @@ void R2DEngine::compileShaders() {
         return;
     }
 }
+#endif
 
 void R2DEngine::gameLoop() {
     if (!onCreate()) {
         loop = false;
     }
 
+    double deltaTime = 0.0;
+#if USE_OPENGL
     double time_a = glfwGetTime();
     double time_b = glfwGetTime();
+#elif USE_SDL2
+    uint64_t time_a = SDL_GetPerformanceCounter();
+    uint64_t time_b = SDL_GetPerformanceCounter();
+#endif
 
     DEBUG_MSG("game loop start");
     while (loop) {
         while (loop) {
+#if USE_OPENGL
             time_b = glfwGetTime();
-            double deltaTime = time_b - time_a;
+            deltaTime = time_b - time_a;
             while (deltaTime < 0.001) {
                 time_b = glfwGetTime();
                 deltaTime = time_b - time_a;
@@ -476,6 +580,26 @@ void R2DEngine::gameLoop() {
             glGetIntegerv(GL_VIEWPORT, m_viewport);
             screenWidth = m_viewport[2];
             screenHeight = m_viewport[3];
+#elif USE_SDL2
+            time_b = SDL_GetPerformanceCounter();
+            deltaTime = (double)((time_b - time_a) / (double)SDL_GetPerformanceFrequency());
+            time_a = time_b;
+            std::string title = windowTitle + " - FPS " + std::to_string(1.0 / deltaTime);
+            SDL_SetWindowTitle(window, title.c_str());
+            while (SDL_PollEvent(&event)) {
+                switch (event.type) {
+                    case SDL_QUIT: {
+                        loop = false;
+                        break;
+                    }
+                    case SDL_MOUSEMOTION: {
+                        mousePosX = round((double)event.motion.x / (screenWidth / innerWidth));
+                        mousePosY = round((double)event.motion.y / (screenHeight / innerHeight));
+                        break;
+                    }
+                }
+            }
+#endif
             
             clearBuffer();
             if (!onUpdate(deltaTime)) {
@@ -491,6 +615,7 @@ void R2DEngine::gameLoop() {
 
     DEBUG_MSG("game loop end");
 
+#if USE_OPENGL
     if (ibo != 0) {
         glDeleteBuffers(1, &ibo);
         ibo = 0;
@@ -510,6 +635,17 @@ void R2DEngine::gameLoop() {
     glfwTerminate();
 
     DEBUG_MSG("glfw destroyed");
+#elif USE_SDL2
+    SDL_DestroyTexture(bufferTexture);
+    delete bufferData;
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    Mix_Quit();
+    IMG_Quit();
+    SDL_Quit();
+
+    DEBUG_MSG("SDL destroyed");
+#endif
 }
 
 void R2DEngine::drawPoint(Coord coord, Color color) {
@@ -522,6 +658,7 @@ void R2DEngine::drawPoint(Coord coord, Color color) {
 }
 
 R2DEngine::InputState R2DEngine::getKeyState(int key) const {
+#if USE_OPENGL
     int state = glfwGetKey(window, key);
     if (state == GLFW_PRESS) {
         return PRESS;
@@ -530,10 +667,12 @@ R2DEngine::InputState R2DEngine::getKeyState(int key) const {
     } else if (state == GLFW_REPEAT) {
         return REPEAT;
     }
+#endif
     return UNKNOWN;
 }
 
 R2DEngine::InputState R2DEngine::getMouseState(int mouseButton) const {
+#if USE_OPENGL
     int state = glfwGetMouseButton(window, mouseButton);
     if (state == GLFW_PRESS) {
         return PRESS;
@@ -542,6 +681,7 @@ R2DEngine::InputState R2DEngine::getMouseState(int mouseButton) const {
     } else if (state == GLFW_REPEAT) {
         return REPEAT;
     }
+#endif
     return UNKNOWN;
 }
 
