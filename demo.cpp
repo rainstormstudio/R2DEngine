@@ -3,34 +3,21 @@
 #include "R2DEngine.hpp"
 
 class Demo : public R2DEngine {
+    GLint t_loc;
+    GLint innerWidth_loc;
+    GLint innerHeight_loc;
+
     double t;
-    inline uint8_t calcR(int n) {
-        n += t;
-        n /= innerWidth / 1.2;
-        int x = round(t) + n;
-        x += 255;
-        x = x % 500;
-        return (abs(255 - x));
-    }
-    inline uint8_t calcG(int n) {
-        n += t;
-        n /= innerWidth / 1.2;
-        int x = round(t) + n;
-        x = x % 500;
-        return (abs(255 - x));
-    }
-    inline uint8_t calcB(int n) {
-        n += t;
-        n /= innerWidth / 1.2;
-        int x = round(t) + n;
-        x += 128;
-        x = x % 500;
-        return (abs(255 - x));
-    }
+    
 public:
     bool onCreate() override {
         windowTitle = "DEMO";
         t = 0.0f;
+
+        t_loc = glGetUniformLocation(shader, "t");
+        innerWidth_loc = glGetUniformLocation(shader, "innerWidth");
+        innerHeight_loc = glGetUniformLocation(shader, "innerHeight");
+
         return true;
     }
 
@@ -39,22 +26,18 @@ public:
         if (t > 500.0f) {
             t = 0.0f;
         }
-        for (int x = 0; x < innerWidth; x ++) {
-            for (int y = 0; y < innerHeight; y ++) {
-                drawPoint({x, y}, {
-                    ((calcR(x * (innerHeight - y)))),
-                    ((calcG(y * (innerWidth - x)))),
-                    ((calcB(x * y)))
-                });
-            }
-        }
+
+        glUniform1f(t_loc, t);
+        glUniform1i(innerWidth_loc, innerWidth);
+        glUniform1i(innerHeight_loc, innerHeight);
+
         return true;
     }
 };
 
 int main() {
     Demo demo;
-    if (demo.construct(1280, 720)) {
+    if (demo.construct(1280, 720, 1920, 1080)) {
         demo.init("", "./shaders/final.fsh");
     }
 
