@@ -1,3 +1,4 @@
+#define DEBUG_ENABLED 1
 //#define USE_SDL2 1
 #include "R2DEngine.hpp"
 
@@ -54,7 +55,7 @@ public:
 int main() {
     Demo demo;
     if (demo.construct(1280, 720)) {
-        demo.init();
+        demo.init("", "./shaders/final.fsh");
     }
 
     return 0;

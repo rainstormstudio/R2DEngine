@@ -240,8 +240,9 @@ private:
     void swapBuffers();
 
 #if USE_OPENGL
+    std::string importShader(const char* shaderPath);
     void addShader(GLuint program, const char* shaderCode, GLenum shaderType);
-    void compileShaders();
+    void compileShaders(const char* vCode, const char* fCode);
 #endif
 
 public:
@@ -259,7 +260,7 @@ public:
 public:
     // game
     bool construct(int32_t screenWidth = 800, int32_t screenHeight = 600, int32_t innerWidth = 800, int32_t innerHeight = 600);
-    void init();
+    void init(const char* vShaderPath = "", const char* fShaderPath = "");
 
 public:
     // events
@@ -357,10 +358,6 @@ bool R2DEngine::construct(int32_t screenWidth, int32_t screenHeight, int32_t inn
 
     DEBUG_MSG("window constructed");
 
-    compileShaders();
-    DEBUG_MSG("shaders compiled");
-    glUseProgram(shader);
-
     bufferData = new GLubyte[innerWidth * innerHeight * 4];
     memset(bufferData, 0, sizeof(GLubyte) * innerWidth * innerHeight * 4);
     glGenTextures(1, &bufferTexture);
@@ -444,8 +441,24 @@ bool R2DEngine::construct(int32_t screenWidth, int32_t screenHeight, int32_t inn
     return true;
 }
 
-void R2DEngine::init() {
+void R2DEngine::init(const char* vShaderPath, const char* fShaderPath) {
     DEBUG_MSG("init");
+
+    std::string v = importShader(vShaderPath);
+    std::string f = importShader(fShaderPath);
+
+    const char* vCode = v.c_str();
+    const char* fCode = f.c_str();
+    if (vCode[0] == '\0') {
+        vCode = vShader;
+    }
+    if (fCode[0] == '\0') {
+        fCode = fShader;
+    }
+    compileShaders(vCode, fCode);
+    glUseProgram(shader);
+    DEBUG_MSG("shaders compiled");
+
     loop = true;
     gameLoop();
 }
@@ -481,6 +494,34 @@ void R2DEngine::swapBuffers() {
 }
 
 #if USE_OPENGL
+std::string R2DEngine::importShader(const char* shaderPath) {
+    if (shaderPath[0] == '\0') {
+        return "";
+    }
+
+    std::string content;
+    std::ifstream fileStream(shaderPath, std::ios::in);
+
+    if (!fileStream.is_open()) {
+        DEBUG_ERROR("Failed to read shader:");
+        DEBUG_ERROR(shaderPath);
+        return "";
+    }
+
+    std::string line = "";
+    while (!fileStream.eof()) {
+        std::getline(fileStream, line);
+        content.append(line + "\n");
+    }
+
+    fileStream.close();
+
+    DEBUG_MSG("load shader:");
+    DEBUG_MSG(content.c_str());
+
+    return content;
+}
+
 void R2DEngine::addShader(GLuint program, const char* shaderCode, GLenum shaderType) {
     GLuint shader = glCreateShader(shaderType);
 
@@ -505,15 +546,15 @@ void R2DEngine::addShader(GLuint program, const char* shaderCode, GLenum shaderT
     glAttachShader(program, shader);
 }
 
-void R2DEngine::compileShaders() {
+void R2DEngine::compileShaders(const char* vCode, const char* fCode) {
     shader = glCreateProgram();
     if (!shader) {
         DEBUG_ERROR("failed to create shader program");
         return;
     }
 
-    addShader(shader, vShader, GL_VERTEX_SHADER);
-    addShader(shader, fShader, GL_FRAGMENT_SHADER);
+    addShader(shader, vCode, GL_VERTEX_SHADER);
+    addShader(shader, fCode, GL_FRAGMENT_SHADER);
 
     glLinkProgram(shader);
 
