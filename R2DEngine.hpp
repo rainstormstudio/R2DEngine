@@ -182,7 +182,6 @@ private:
     // graphics
 #if USE_OPENGL
     GLFWwindow* window;
-    GLuint shader;
     GLuint bufferTexture;
     GLubyte* bufferData;
     GLuint vao, ibo, vbo;
@@ -220,6 +219,9 @@ protected:
     int32_t innerWidth;
     int32_t innerHeight;
     std::string windowTitle;
+#if USE_OPENGL
+    GLuint shader;
+#endif
 
     // events
     enum InputState {
@@ -357,6 +359,7 @@ bool R2DEngine::construct(int32_t screenWidth, int32_t screenHeight, int32_t inn
 
     compileShaders();
     DEBUG_MSG("shaders compiled");
+    glUseProgram(shader);
 
     bufferData = new GLubyte[innerWidth * innerHeight * 4];
     memset(bufferData, 0, sizeof(GLubyte) * innerWidth * innerHeight * 4);
@@ -460,7 +463,6 @@ void R2DEngine::clearBuffer() {
 
 void R2DEngine::swapBuffers() {
 #if USE_OPENGL
-    glUseProgram(shader);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, bufferTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, innerWidth, innerHeight, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bufferData);
@@ -470,8 +472,6 @@ void R2DEngine::swapBuffers() {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-
-    glUseProgram(0);
     glfwSwapBuffers(window);
 #elif USE_SDL2
     SDL_UpdateTexture(bufferTexture, nullptr, (void*)bufferData, innerWidth * 4);
